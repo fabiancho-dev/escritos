@@ -1,10 +1,12 @@
 ---
 import Lectura from '../layouts/Lectura.astro';
+import { SITE_NOMBRE } from '../config';
 ---
 
-<Lectura titulo="Escritos" descripcion="Sitio de lectura. Los escritos se comparten mediante enlace directo.">
+<Lectura descripcion="Sitio de lectura. Los escritos se comparten mediante enlace directo.">
   <section class="mensaje">
-    <h1>Escritos</h1>
+    <h1>{SITE_NOMBRE}</h1>
     <p>Los escritos de este sitio se comparten mediante enlace directo.</p>
+    <span class="hero__linea" aria-hidden="true"></span>
   </section>
 </Lectura>

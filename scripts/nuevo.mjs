@@ -4,14 +4,25 @@
  * Crea un escrito nuevo en src/content/escritos/.
  *
  * Uso:
- *   npm run nuevo -- "Título" --tipo reflexion --resumen "Texto breve" [--archivo "C:\ruta\doc.md"]
+ *   npm run nuevo -- "Título" --tipo reflexion --resumen "Texto breve" \
+ *     [--archivo "C:\ruta\doc.md"] [--imagen "C:\ruta\foto.jpg" --alt "Descripción"]
+ *     [--posicion "70% 40%"] [--marca "Texto"]
  *
  * Sin dependencias externas. Solo se ejecuta como script (el import de
  * astro.config.mjs es para leer `site` y `base`, única fuente de verdad).
  */
 
 import { randomInt } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import {
+  constants as fsConstants,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -28,16 +39,30 @@ const ZONA_HORARIA = 'America/Bogota';
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DIR_ESCRITOS = join(RAIZ, 'src', 'content', 'escritos');
+const DIR_IMAGENES = join(RAIZ, 'src', 'assets', 'escritos');
+
+const EXTENSIONES_IMAGEN = ['.jpg', '.jpeg', '.png', '.webp', '.avif'];
+const IMAGEN_AVISO_BYTES = 8 * 1024 * 1024;
+// Igual que POSICION_IMAGEN en src/content.config.ts.
+const POSICION_VALIDA = /^[a-z0-9%.\s-]+$/i;
+const POSICION_MAX = 40;
+const MARCA_MAX = 60;
 
 const USO = `
 Uso:
-  npm run nuevo -- "Título del escrito" --tipo <tipo> --resumen "Texto breve" [--archivo "C:\\ruta\\documento.md"]
+  npm run nuevo -- "Título del escrito" --tipo <tipo> --resumen "Texto breve" [opciones]
 
-Opciones:
-  --tipo      ${TIPOS.join(' | ')}
-  --resumen   Máximo ${RESUMEN_MAX} caracteres
-  --archivo   (opcional) Markdown exportado de Google Docs para importar
-  -h, --ayuda Muestra este mensaje
+Obligatorias:
+  --tipo        ${TIPOS.join(' | ')}
+  --resumen     Máximo ${RESUMEN_MAX} caracteres
+
+Opcionales:
+  --archivo     Markdown exportado de Google Docs para importar
+  --imagen      Foto del encabezado (${EXTENSIONES_IMAGEN.join(', ')}); se copia a src/assets/escritos/
+  --alt         Texto alternativo de la foto (obligatorio si se usa --imagen)
+  --posicion    Encuadre de la foto en móvil, p. ej. "70% 40%" (por defecto: center)
+  --marca       Texto que sustituye el nombre del sitio en el header de este escrito
+  -h, --ayuda   Muestra este mensaje
 `;
 
 // ---------------------------------------------------------------------------
@@ -246,6 +271,10 @@ function main() {
         tipo: { type: 'string' },
         resumen: { type: 'string' },
         archivo: { type: 'string' },
+        imagen: { type: 'string' },
+        alt: { type: 'string' },
+        posicion: { type: 'string' },
+        marca: { type: 'string' },
         ayuda: { type: 'boolean', short: 'h' },
       },
     });
@@ -275,6 +304,29 @@ function main() {
     rutaArchivo = resolve(values.archivo);
     if (!existsSync(rutaArchivo)) errores.push(`No existe el archivo: ${rutaArchivo}`);
     else if (extname(rutaArchivo).toLowerCase() !== '.md') errores.push(`--archivo debe ser un .md: ${rutaArchivo}`);
+  }
+
+  // Imagen del encabezado
+  const alt = values.alt?.trim() ?? '';
+  const posicion = values.posicion?.trim() ?? '';
+  const marca = values.marca?.trim() ?? '';
+  let rutaImagen = null;
+  let extensionImagen = '';
+  if (values.imagen !== undefined) {
+    rutaImagen = resolve(values.imagen);
+    extensionImagen = extname(rutaImagen).toLowerCase();
+    if (!existsSync(rutaImagen) || !statSync(rutaImagen).isFile()) errores.push(`No existe la imagen: ${rutaImagen}`);
+    else if (!EXTENSIONES_IMAGEN.includes(extensionImagen)) errores.push(`--imagen debe ser ${EXTENSIONES_IMAGEN.join(', ')}: ${rutaImagen}`);
+    if (!alt) errores.push('--imagen requiere --alt con el texto alternativo de la foto (accesibilidad).');
+  } else {
+    if (values.alt !== undefined) errores.push('--alt solo se puede usar junto con --imagen.');
+    if (values.posicion !== undefined) errores.push('--posicion solo se puede usar junto con --imagen.');
+  }
+  if (values.posicion !== undefined && (!posicion || posicion.length > POSICION_MAX || !POSICION_VALIDA.test(posicion))) {
+    errores.push(`--posicion no es válida (ejemplos: "70% 40%", "center", "left top"; máximo ${POSICION_MAX} caracteres).`);
+  }
+  if (values.marca !== undefined && (!marca || marca.length > MARCA_MAX)) {
+    errores.push(`--marca no puede estar vacía ni superar ${MARCA_MAX} caracteres.`);
   }
   if (errores.length > 0) return fallar(errores);
 
@@ -306,29 +358,48 @@ function main() {
   // Slug único, creado de forma atómica (flag 'wx') para evitar colisiones.
   const base = crearSlugBase(titulo);
   const fecha = fechaHoyBogota();
-  const frontmatter = [
-    '---',
-    `titulo: ${yamlTexto(titulo)}`,
-    `fecha: ${fecha}`,
-    `resumen: ${yamlTexto(resumen)}`,
-    `tipo: ${tipo}`,
-    '---',
-    '',
-  ].join('\n');
 
   mkdirSync(DIR_ESCRITOS, { recursive: true });
   let slug = '';
   let ruta = '';
+  let rutaImagenCopiada = '';
   for (let intento = 0; ; intento++) {
     if (intento >= 50) return fallar(['No se pudo generar un nombre único tras 50 intentos.']);
     slug = `${base}-${sufijoAleatorio()}`;
     ruta = join(DIR_ESCRITOS, `${slug}.md`);
-    try {
-      writeFileSync(ruta, `${frontmatter}\n${cuerpo}\n`, { encoding: 'utf8', flag: 'wx' });
-      break;
-    } catch (error) {
-      if (/** @type {NodeJS.ErrnoException} */ (error).code !== 'EEXIST') throw error;
+    const destinoImagen = rutaImagen ? join(DIR_IMAGENES, `${slug}${extensionImagen}`) : '';
+    if (destinoImagen && existsSync(destinoImagen)) continue;
+
+    const lineas = ['---', `titulo: ${yamlTexto(titulo)}`, `fecha: ${fecha}`, `resumen: ${yamlTexto(resumen)}`, `tipo: ${tipo}`];
+    if (rutaImagen) {
+      // Ruta relativa al .md, como exige el helper image() de las colecciones.
+      lineas.push(`imagen: ../../assets/escritos/${slug}${extensionImagen}`, `imagenAlt: ${yamlTexto(alt)}`);
+      if (posicion) lineas.push(`imagenPosicion: ${yamlTexto(posicion)}`);
     }
+    if (marca) lineas.push(`marca: ${yamlTexto(marca)}`);
+    lineas.push('---', '');
+
+    try {
+      writeFileSync(ruta, `${lineas.join('\n')}\n${cuerpo}\n`, { encoding: 'utf8', flag: 'wx' });
+    } catch (error) {
+      if (/** @type {NodeJS.ErrnoException} */ (error).code === 'EEXIST') continue;
+      throw error;
+    }
+
+    if (rutaImagen) {
+      try {
+        mkdirSync(DIR_IMAGENES, { recursive: true });
+        copyFileSync(rutaImagen, destinoImagen, fsConstants.COPYFILE_EXCL);
+        rutaImagenCopiada = destinoImagen;
+      } catch (error) {
+        unlinkSync(ruta); // no dejar un escrito que apunta a una imagen inexistente
+        return fallar([`No se pudo copiar la imagen: ${error instanceof Error ? error.message : error}`]);
+      }
+      if (statSync(rutaImagen).size > IMAGEN_AVISO_BYTES) {
+        avisos.push('⚠ La imagen pesa más de 8 MB. Se optimiza al compilar, pero aumenta el tamaño del repositorio.');
+      }
+    }
+    break;
   }
 
   const baseUrl = String(config.base ?? '').replace(/^\/*|\/*$/g, '');
@@ -338,6 +409,7 @@ function main() {
   console.log('');
   for (const a of avisos) console.log(a);
   console.log(`\n✔ Escrito creado: ${relative(process.cwd(), ruta) || ruta}`);
+  if (rutaImagenCopiada) console.log(`  Imagen copiada: ${relative(process.cwd(), rutaImagenCopiada) || rutaImagenCopiada}`);
   console.log(`  URL final:      ${url}\n`);
 }
 

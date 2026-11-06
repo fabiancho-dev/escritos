@@ -1,5 +1,6 @@
 /*
- * Estilos base de lectura. Solo consumen variables de tokens.css.
+ * Estilos de lectura. Solo consumen variables de tokens.css.
+ * Mobile first: los ajustes de escritorio van en media queries min-width.
  */
 
 *,
@@ -11,6 +12,10 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  background: var(--color-fondo);
+  /* Evita que el navegador fabrique negrita o cursiva falsas (Cambo solo tiene 400). */
+  font-synthesis: none;
+  scroll-padding-top: var(--alto-cabecera);
 }
 
 body {
@@ -19,7 +24,8 @@ body {
   color: var(--color-texto);
   font-family: var(--fuente-texto);
   font-size: var(--texto-base);
-  line-height: var(--interlineado);
+  font-weight: var(--peso-texto);
+  line-height: var(--interlineado-texto);
   font-kerning: normal;
   font-optical-sizing: auto;
   text-rendering: optimizeLegibility;
@@ -29,12 +35,12 @@ body {
 
 main {
   display: block;
-  max-width: calc(var(--medida) + 2 * var(--margen-pagina));
-  margin-inline: auto;
-  padding: var(--espacio-xl) var(--margen-pagina);
 }
 
-/* ---- Foco visible ---- */
+::selection {
+  background: var(--color-acento);
+  color: var(--color-fondo);
+}
 
 :focus-visible {
   outline: 2px solid var(--color-acento);
@@ -42,61 +48,269 @@ main {
   border-radius: 2px;
 }
 
-/* ---- Encabezado del escrito ---- */
+/* ---------------------------------------------------------------------------
+ * Header fijo
+ * Sin JavaScript queda siempre sólido. Con JavaScript (html.js) es transparente
+ * sobre la foto y toma fondo cuando el título del escrito sale de la pantalla.
+ * ------------------------------------------------------------------------- */
 
-.encabezado {
-  margin-block-end: var(--espacio-l);
+.sitio-cabecera {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 10;
+  height: var(--alto-cabecera);
+  background-color: var(--color-cabecera);
+  border-bottom: var(--grosor-linea) solid var(--color-linea);
+  -webkit-backdrop-filter: blur(var(--desenfoque-cabecera));
+  backdrop-filter: blur(var(--desenfoque-cabecera));
+  transition:
+    background-color var(--duracion) var(--curva),
+    border-color var(--duracion) var(--curva),
+    -webkit-backdrop-filter var(--duracion) var(--curva),
+    backdrop-filter var(--duracion) var(--curva);
 }
 
-.encabezado h1,
-.mensaje h1 {
+.sitio-cabecera::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--degradado-cabecera);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duracion) var(--curva);
+}
+
+.js .sitio-cabecera[data-estado='arriba'] {
+  background-color: transparent;
+  border-bottom-color: transparent;
+  -webkit-backdrop-filter: blur(0);
+  backdrop-filter: blur(0);
+}
+
+.js .sitio-cabecera[data-estado='arriba']::before {
+  opacity: 1;
+}
+
+.sitio-cabecera__interior {
+  position: relative;
+  display: grid;
+  align-items: center;
+  height: 100%;
+  padding-inline: var(--margen);
+}
+
+.sitio-cabecera__marca,
+.sitio-cabecera__titulo {
+  grid-area: 1 / 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--fuente-titulo);
+  font-weight: 400;
+  transition:
+    opacity var(--duracion) var(--curva),
+    transform var(--duracion) var(--curva),
+    visibility var(--duracion) var(--curva);
+}
+
+.sitio-cabecera__marca {
+  font-size: var(--texto-marca);
+  letter-spacing: var(--tracking-marca);
+  text-transform: uppercase;
+}
+
+.sitio-cabecera__titulo {
+  font-size: calc(var(--texto-marca) * 1.1);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(0.35rem);
+}
+
+.sitio-cabecera[data-estado='titulo'] .sitio-cabecera__marca {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-0.35rem);
+}
+
+.sitio-cabecera[data-estado='titulo'] .sitio-cabecera__titulo {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * Hero del escrito
+ * ------------------------------------------------------------------------- */
+
+.hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-end;
+  overflow: clip;
+  padding: calc(var(--alto-cabecera) + var(--espacio-l)) var(--margen) var(--espacio-l);
+}
+
+.hero--con-imagen {
+  min-height: var(--alto-hero);
+}
+
+.hero--sin-imagen {
+  padding-block-start: calc(var(--alto-cabecera) + var(--espacio-xl));
+  padding-block-end: var(--espacio-m);
+}
+
+.hero__fondo {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: -1;
+  height: var(--alto-foto-hero);
+  background: var(--color-fondo);
+}
+
+.hero__fondo picture,
+.hero__fondo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.hero__fondo img {
+  object-fit: cover;
+  object-position: var(--hero-posicion, center);
+  filter: var(--filtro-foto);
+}
+
+.hero--color .hero__fondo img {
+  filter: var(--filtro-foto-color);
+}
+
+.hero__fondo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--degradado-hero);
+}
+
+.hero__contenido {
+  width: var(--ancho-texto-hero);
+}
+
+.hero--sin-imagen .hero__contenido {
+  width: min(100%, var(--medida));
+  margin-inline: auto;
+}
+
+.hero__categoria {
+  margin: 0 0 var(--espacio-s);
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-categoria);
+  letter-spacing: var(--tracking-categoria);
+  text-transform: uppercase;
+  color: var(--color-texto);
+}
+
+.hero__titulo {
   margin: 0;
-  font-size: var(--texto-h1);
-  font-weight: var(--peso-titulo);
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-titulo);
+  font-weight: 400;
   line-height: var(--interlineado-titulo);
-  letter-spacing: -0.01em;
   text-wrap: balance;
+  hyphens: manual;
 }
 
-.fecha {
-  margin: var(--espacio-s) 0 0;
+.hero__subtitulo {
+  margin: var(--espacio-m) 0 0;
+  font-size: var(--texto-subtitulo);
+  font-style: italic;
+  line-height: 1.35;
+  text-wrap: pretty;
+}
+
+.hero__meta {
+  margin: var(--espacio-m) 0 0;
+  font-size: var(--texto-meta);
+  color: var(--color-texto);
+}
+
+.hero--sin-imagen .hero__meta {
   color: var(--color-tenue);
-  font-size: var(--texto-pequeno);
 }
 
-/* ---- Mensajes (portada y 404) ---- */
-
-.mensaje p {
-  margin: var(--espacio-s) 0 0;
-  color: var(--color-tenue);
+.hero__linea {
+  display: block;
+  width: var(--linea-hero-ancho);
+  height: var(--linea-hero-grosor);
+  margin-block-start: var(--espacio-m);
+  background: var(--color-acento);
 }
 
-/* ---- Cuerpo del escrito ---- */
+@media (min-width: 48rem) {
+  .hero--con-imagen {
+    min-height: var(--alto-hero-escritorio);
+    align-items: flex-end;
+    padding-block-end: var(--espacio-xl);
+  }
+
+  .hero--con-imagen .hero__contenido {
+    width: var(--ancho-texto-hero-escritorio);
+  }
+
+  .hero__fondo {
+    inset: 0;
+    height: auto;
+  }
+
+  .hero--con-imagen .hero__fondo img {
+    object-position: var(--hero-posicion-escritorio, center);
+  }
+
+  .hero__fondo::after {
+    background: var(--degradado-hero-escritorio);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Cuerpo del escrito
+ * ------------------------------------------------------------------------- */
+
+.cuerpo {
+  width: min(100% - 2 * var(--margen), var(--medida));
+  margin-inline: auto;
+  padding-block: var(--espacio-m) var(--espacio-xl);
+}
 
 .cuerpo > :first-child {
   margin-block-start: 0;
 }
 
+/* Letra capital: Cambo, ~2 líneas. */
+.cuerpo > p:first-child::first-letter {
+  float: left;
+  margin: 0.04em 0.12em 0 0;
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-capital);
+  font-weight: 400;
+  line-height: 0.82;
+  color: var(--color-texto);
+}
+
 .cuerpo h1,
 .cuerpo h2,
-.cuerpo h3,
-.cuerpo h4 {
-  font-weight: var(--peso-titulo);
-  line-height: var(--interlineado-titulo);
+.cuerpo h3 {
+  font-family: var(--fuente-titulo);
+  font-weight: 400;
+  line-height: var(--interlineado-encabezado);
   text-wrap: balance;
   break-after: avoid;
 }
 
-.cuerpo h1 {
-  margin: 2.5em 0 0.6em;
-  font-size: var(--texto-h1);
-  letter-spacing: -0.01em;
-}
-
+.cuerpo h1,
 .cuerpo h2 {
   margin: 2.2em 0 0.55em;
   font-size: var(--texto-h2);
-  letter-spacing: -0.005em;
 }
 
 .cuerpo h3 {
@@ -105,9 +319,11 @@ main {
 }
 
 .cuerpo h4 {
-  margin: 1.6em 0 0.4em;
-  font-size: var(--texto-h4);
-  font-style: italic;
+  margin: 1.7em 0 0.4em;
+  font-size: 1em;
+  font-weight: var(--peso-h4);
+  line-height: var(--interlineado-encabezado);
+  break-after: avoid;
 }
 
 .cuerpo p,
@@ -117,7 +333,7 @@ main {
 .cuerpo pre,
 .cuerpo table,
 .cuerpo figure {
-  margin-block: 0 1.25em;
+  margin-block: 0 1.3em;
 }
 
 .cuerpo p {
@@ -129,29 +345,25 @@ main {
   font-weight: var(--peso-negrita);
 }
 
-/* ---- Enlaces ---- */
-
 .cuerpo a {
   color: var(--color-acento);
   text-decoration: underline;
   text-decoration-thickness: 0.08em;
-  text-underline-offset: 0.2em;
+  text-underline-offset: 0.22em;
 }
 
 .cuerpo a:hover {
   text-decoration-thickness: 0.14em;
 }
 
-/* ---- Listas ---- */
-
 .cuerpo ul,
 .cuerpo ol {
-  padding-inline-start: 1.5em;
+  padding-inline-start: 1.4em;
 }
 
 .cuerpo li {
   margin-block: 0.4em;
-  padding-inline-start: 0.25em;
+  padding-inline-start: 0.2em;
 }
 
 .cuerpo li > ul,
@@ -160,14 +372,12 @@ main {
 }
 
 .cuerpo li::marker {
-  color: var(--color-tenue);
+  color: var(--color-acento);
 }
-
-/* ---- Citas ---- */
 
 .cuerpo blockquote {
   margin-inline: 0;
-  padding: 0.1em 0 0.1em 1.25em;
+  padding: 0.1em 0 0.1em 1.2em;
   border-inline-start: var(--grosor-cita) solid var(--color-acento);
   color: var(--color-tenue);
   font-style: italic;
@@ -176,8 +386,6 @@ main {
 .cuerpo blockquote > :last-child {
   margin-block-end: 0;
 }
-
-/* ---- Código ---- */
 
 .cuerpo code {
   padding: 0.12em 0.35em;
@@ -190,7 +398,7 @@ main {
 .cuerpo pre {
   padding: var(--espacio-s) var(--espacio-m);
   overflow-x: auto;
-  border: var(--grosor-borde) solid var(--color-borde);
+  border: var(--grosor-linea) solid var(--color-linea);
   border-radius: var(--radio);
   background: var(--color-superficie);
   font-size: 0.85em;
@@ -205,8 +413,6 @@ main {
   font-size: inherit;
 }
 
-/* ---- Tablas ---- */
-
 .cuerpo table {
   display: block;
   max-width: 100%;
@@ -219,17 +425,15 @@ main {
 .cuerpo th,
 .cuerpo td {
   padding: 0.55em 0.9em;
-  border-block-end: var(--grosor-borde) solid var(--color-borde);
+  border-block-end: var(--grosor-linea) solid var(--color-linea);
   text-align: start;
   vertical-align: top;
 }
 
 .cuerpo th {
-  border-block-end-width: 2px;
-  font-weight: var(--peso-titulo);
+  border-block-end-color: var(--color-tenue);
+  font-weight: var(--peso-negrita);
 }
-
-/* ---- Imágenes y separadores ---- */
 
 .cuerpo img,
 .cuerpo svg,
@@ -241,23 +445,79 @@ main {
   border-radius: var(--radio);
 }
 
-.cuerpo hr {
-  width: 6rem;
-  margin: var(--espacio-l) auto;
-  border: 0;
-  border-block-start: var(--grosor-borde) solid var(--color-tenue);
+.cuerpo figcaption {
+  margin-block-start: var(--espacio-xs);
+  color: var(--color-tenue);
+  font-size: var(--texto-pequeno);
+  line-height: 1.4;
 }
 
-/* ---- Impresión ---- */
+.cuerpo hr {
+  margin: var(--espacio-l) 0;
+  border: 0;
+  border-block-start: var(--grosor-linea) solid var(--color-linea);
+}
+
+/* ---------------------------------------------------------------------------
+ * Portada y 404
+ * ------------------------------------------------------------------------- */
+
+.mensaje {
+  display: grid;
+  align-content: center;
+  min-height: 100svh;
+  padding: var(--alto-cabecera) var(--margen);
+  width: min(100%, calc(var(--medida) + 2 * var(--margen)));
+  margin-inline: auto;
+}
+
+.mensaje h1 {
+  margin: 0;
+  font-family: var(--fuente-titulo);
+  font-size: var(--texto-titulo);
+  font-weight: 400;
+  line-height: var(--interlineado-titulo);
+  text-wrap: balance;
+}
+
+.mensaje p {
+  margin: var(--espacio-m) 0 0;
+  color: var(--color-tenue);
+  font-size: var(--texto-subtitulo);
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.mensaje .hero__linea {
+  margin-block-start: var(--espacio-m);
+}
+
+/* ---------------------------------------------------------------------------
+ * Movimiento reducido
+ * ------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Impresión: fondo blanco, texto negro, sin header ni foto.
+ * ------------------------------------------------------------------------- */
 
 @media print {
   :root {
     --color-fondo: #fff;
+    --color-superficie: #fff;
     --color-texto: #000;
     --color-tenue: #333;
     --color-acento: #000;
-    --color-borde: #999;
-    --color-superficie: #fff;
+    --color-linea: #999;
   }
 
   @page {
@@ -269,13 +529,41 @@ main {
     line-height: 1.5;
   }
 
-  main {
-    max-width: none;
-    padding: 0;
+  .sitio-cabecera,
+  .hero__fondo {
+    display: none;
   }
 
-  .cuerpo a {
-    text-decoration: underline;
+  .hero,
+  .hero--con-imagen,
+  .hero--sin-imagen {
+    display: block;
+    min-height: 0;
+    padding: 0 0 1cm;
+    overflow: visible;
+  }
+
+  .hero__contenido,
+  .hero--sin-imagen .hero__contenido {
+    width: auto;
+    margin: 0;
+  }
+
+  .hero__titulo {
+    font-size: 26pt;
+  }
+
+  .hero__subtitulo {
+    font-size: 13pt;
+  }
+
+  .hero__meta {
+    color: #333;
+  }
+
+  .cuerpo {
+    width: auto;
+    padding: 0;
   }
 
   .cuerpo a[href^='http']::after {

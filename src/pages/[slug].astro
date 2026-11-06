@@ -1,7 +1,9 @@
 ---
 import type { GetStaticPaths } from 'astro';
 import { getCollection, render } from 'astro:content';
+import Hero from '../components/Hero.astro';
 import Lectura from '../layouts/Lectura.astro';
+import { ETIQUETAS_TIPO, fechaLarga, minutosDeLectura } from '../lib/lectura';
 
 export const getStaticPaths = (async () => {
   const escritos = await getCollection('escritos');
@@ -13,23 +15,23 @@ export const getStaticPaths = (async () => {
 
 const { escrito } = Astro.props;
 const { Content } = await render(escrito);
-const { titulo, fecha, resumen } = escrito.data;
-
-// La fecha del frontmatter es un día calendario sin hora (YAML la lee como
-// medianoche UTC): se formatea en UTC para que no retroceda un día en Colombia.
-const fechaLarga = new Intl.DateTimeFormat('es-CO', {
-  dateStyle: 'long',
-  timeZone: 'UTC',
-}).format(fecha);
-const fechaIso = fecha.toISOString().slice(0, 10);
+const { titulo, fecha, resumen, tipo, imagen, imagenAlt, imagenPosicion, imagenColor, marca } = escrito.data;
 ---
 
-<Lectura titulo={titulo} descripcion={resumen}>
+<Lectura titulo={titulo} descripcion={resumen} marca={marca} tituloHeader={titulo}>
   <article>
-    <header class="encabezado">
-      <h1>{titulo}</h1>
-      <p class="fecha"><time datetime={fechaIso}>{fechaLarga}</time></p>
-    </header>
+    <Hero
+      categoria={ETIQUETAS_TIPO[tipo]}
+      titulo={titulo}
+      subtitulo={resumen}
+      fecha={fecha}
+      fechaLarga={fechaLarga(fecha)}
+      minutosLectura={minutosDeLectura(escrito.body ?? '')}
+      imagen={imagen}
+      imagenAlt={imagenAlt}
+      imagenPosicion={imagenPosicion}
+      imagenColor={imagenColor}
+    />
     <div class="cuerpo">
       <Content />
     </div>

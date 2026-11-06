@@ -1,0 +1,67 @@
+---
+import { Picture } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+interface Props {
+  categoria: string;
+  titulo: string;
+  subtitulo: string;
+  fecha: Date;
+  fechaLarga: string;
+  minutosLectura: number;
+  imagen?: ImageMetadata;
+  imagenAlt?: string;
+  imagenPosicion?: string;
+  imagenColor?: boolean;
+}
+
+const {
+  categoria,
+  titulo,
+  subtitulo,
+  fecha,
+  fechaLarga,
+  minutosLectura,
+  imagen,
+  imagenAlt,
+  imagenPosicion = 'center',
+  imagenColor = false,
+} = Astro.props;
+
+const clases = ['hero', imagen ? 'hero--con-imagen' : 'hero--sin-imagen', imagenColor && 'hero--color']
+  .filter(Boolean)
+  .join(' ');
+---
+
+<header class={clases} style={imagen ? `--hero-posicion: ${imagenPosicion}` : undefined}>
+  {
+    imagen && (
+      <div class="hero__fondo">
+        {/* Es el LCP: `priority` aplica loading="eager", decoding="sync" y fetchpriority="high".
+            En móvil el hero es vertical y `cover` amplía la foto ~3,4 veces: el `sizes` de
+            340vw hace que el navegador pida una versión suficientemente ancha. */}
+        <Picture
+          src={imagen}
+          alt={imagenAlt ?? ''}
+          formats={['avif', 'webp']}
+          fallbackFormat="jpg"
+          widths={[640, 960, 1280, 1672]}
+          sizes="(max-width: 47.99rem) 340vw, 100vw"
+          quality={80}
+          priority
+        />
+      </div>
+    )
+  }
+  <div class="hero__contenido">
+    <p class="hero__categoria">{categoria}</p>
+    <h1 class="hero__titulo" data-observar-titulo>{titulo}</h1>
+    <p class="hero__subtitulo">{subtitulo}</p>
+    <p class="hero__meta">
+      <time datetime={fecha.toISOString().slice(0, 10)}>{fechaLarga}</time>
+      <span aria-hidden="true"> · </span>
+      <span>{minutosLectura} min de lectura</span>
+    </p>
+    <span class="hero__linea" aria-hidden="true"></span>
+  </div>
+</header>

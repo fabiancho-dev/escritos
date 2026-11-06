@@ -1,0 +1,18 @@
+---
+interface Props {
+  /** Nombre del sitio (o la marca propia del escrito). */
+  marca: string;
+  /** Título del escrito: reemplaza a la marca al pasar el h1. Opcional. */
+  titulo?: string;
+}
+
+const { marca, titulo } = Astro.props;
+---
+
+<header class="sitio-cabecera" data-sitio-cabecera data-estado="arriba">
+  <div class="sitio-cabecera__interior">
+    <span class="sitio-cabecera__marca">{marca}</span>
+    {/* aria-hidden: el h1 de la página ya expone el título a lectores de pantalla. */}
+    {titulo && <span class="sitio-cabecera__titulo" aria-hidden="true">{titulo}</span>}
+  </div>
+</header>

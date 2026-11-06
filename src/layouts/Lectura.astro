@@ -1,18 +1,33 @@
 ---
+import '@fontsource/cambo/index.css';
 import '@fontsource-variable/source-serif-4/index.css';
 import '@fontsource-variable/source-serif-4/wght-italic.css';
 import '../styles/tokens.css';
 import '../styles/base.css';
 
+// Solo se precargan las fuentes críticas (subconjunto latin, visibles al cargar).
+import camboLatin from '@fontsource/cambo/files/cambo-latin-400-normal.woff2?url';
+import serifLatin from '@fontsource-variable/source-serif-4/files/source-serif-4-latin-wght-normal.woff2?url';
+import serifLatinCursiva from '@fontsource-variable/source-serif-4/files/source-serif-4-latin-wght-italic.woff2?url';
+
+import Header from '../components/Header.astro';
+import { COLOR_FONDO, SITE_NOMBRE } from '../config';
+
 interface Props {
-  /** Título de la página (etiqueta <title>). */
-  titulo: string;
+  /** Título de la página. El <title> será "Título · Nombre del sitio". */
+  titulo?: string;
   /** Texto para <meta name="description">. */
   descripcion: string;
+  /** Sustituye el nombre del sitio en el header. */
+  marca?: string;
+  /** Título que el header muestra al pasar el h1 (solo páginas de escrito). */
+  tituloHeader?: string;
 }
 
-const { titulo, descripcion } = Astro.props;
+const { titulo, descripcion, marca, tituloHeader } = Astro.props;
+const tituloDocumento = titulo ? `${titulo} · ${SITE_NOMBRE}` : SITE_NOMBRE;
 const base = import.meta.env.BASE_URL.replace(/\/*$/, '/');
+const fuentes = [camboLatin, serifLatin, serifLatinCursiva];
 ---
 
 <!doctype html>
@@ -20,15 +35,38 @@ const base = import.meta.env.BASE_URL.replace(/\/*$/, '/');
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="light dark" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content={COLOR_FONDO} />
     <meta name="robots" content="noindex, nofollow, noarchive" />
     <meta name="description" content={descripcion} />
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
-    <title>{titulo}</title>
+    {fuentes.map((href) => <link rel="preload" href={href} as="font" type="font/woff2" crossorigin />)}
+    <title>{tituloDocumento}</title>
+    <script is:inline>
+      document.documentElement.classList.add('js');
+    </script>
   </head>
   <body>
+    <Header marca={marca ?? SITE_NOMBRE} titulo={tituloHeader} />
     <main>
       <slot />
     </main>
+    <script is:inline>
+      // Header: al pasar el h1 cambia el nombre del sitio por el título del escrito.
+      // Sin JavaScript (o sin IntersectionObserver) el header queda con el nombre del sitio.
+      (() => {
+        const cabecera = document.querySelector('[data-sitio-cabecera]');
+        const objetivo = document.querySelector('[data-observar-titulo]');
+        if (!cabecera || !objetivo || !('IntersectionObserver' in window)) return;
+        const alto = Math.round(cabecera.getBoundingClientRect().height);
+        new IntersectionObserver(
+          ([entrada]) => {
+            const pasado = !entrada.isIntersecting && entrada.boundingClientRect.bottom <= alto;
+            cabecera.dataset.estado = pasado ? 'titulo' : 'arriba';
+          },
+          { rootMargin: `-${alto}px 0px 0px 0px`, threshold: 0 },
+        ).observe(objetivo);
+      })();
+    </script>
   </body>
 </html>

@@ -1,59 +1,121 @@
 /*
- * Tokens de diseño. Para rediseñar el sitio basta con editar este archivo:
- * base.css solo consume estas variables y no define colores ni medidas propias.
+ * Tokens de diseño. Único lugar con valores visuales (color, fuente, escala,
+ * espacio, radios, duraciones, degradados y filtros). base.css y los
+ * componentes solo consumen estas variables.
  *
- * Contraste (WCAG AA, mínimo 4.5:1 en texto normal):
- *   claro   texto/fondo ≈ 16:1 · tenue/fondo ≈ 6.8:1 · acento/fondo ≈ 8:1
- *   oscuro  texto/fondo ≈ 15:1 · tenue/fondo ≈ 7.2:1 · acento/fondo ≈ 8.3:1
+ * Solo tema oscuro. Contraste sobre --color-fondo (WCAG AA ≥ 4.5:1):
+ *   texto ≈ 15:1 · texto tenue ≈ 7.6:1 · acento ≈ 10:1
+ * El texto sobre la foto se verifica aparte, midiendo el render real.
+ *
+ * Los puntos de corte de las media queries (48rem tablet, 64rem escritorio)
+ * no pueden ser variables CSS y se declaran en base.css.
  */
 
 :root {
-  color-scheme: light dark;
+  color-scheme: dark;
 
-  /* ---- Color: tema claro (por defecto) ---- */
-  --color-fondo: #fbfaf7;
-  --color-texto: #1c1b19;
-  --color-tenue: #5c5850;
-  --color-acento: #1d4ba8;
-  --color-borde: #dcd8cf;
-  --color-superficie: #f0eee8; /* fondo de código y filas alternas */
+  /* ---- Color ---- */
+  --color-fondo: #0f1113; /* mantener igual que COLOR_FONDO en src/config.ts */
+  --fondo-rgb: 15 17 19; /* mismo color, para usarlo con transparencia */
+  --color-superficie: #181b1e;
+  --color-texto: #e9e6e0;
+  --color-tenue: #a8a59e;
+  --color-acento: #c8b595;
+  --color-linea: rgb(255 255 255 / 0.18);
+  --color-cabecera: rgb(var(--fondo-rgb) / 0.82);
 
   /* ---- Tipografía ---- */
+  /* Cambo solo existe en peso 400 normal: nunca se le aplica negrita ni cursiva. */
+  --fuente-titulo: 'Cambo', Georgia, 'Times New Roman', serif;
   --fuente-texto: 'Source Serif 4 Variable', 'Source Serif 4', Georgia, 'Times New Roman', serif;
   --fuente-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', monospace;
 
-  --texto-base: clamp(1.0625rem, 1rem + 0.35vw, 1.3125rem);
+  --texto-base: clamp(1.125rem, 1.07rem + 0.25vw, 1.25rem);
+  --texto-titulo: clamp(2.5rem, 2rem + 2.2vw, 4rem);
+  --texto-subtitulo: clamp(1.2rem, 1.1rem + 0.6vw, 1.5rem);
+  --texto-h2: clamp(1.7rem, 1.45rem + 1vw, 2.2rem);
+  --texto-h3: clamp(1.35rem, 1.2rem + 0.6vw, 1.65rem);
+  --texto-meta: 0.9375rem;
+  --texto-categoria: 0.75rem;
+  --texto-marca: 0.9375rem;
   --texto-pequeno: 0.875em;
-  --texto-h1: clamp(2rem, 1.5rem + 2.2vw, 3rem);
-  --texto-h2: clamp(1.5rem, 1.25rem + 1.1vw, 2.0625rem);
-  --texto-h3: clamp(1.25rem, 1.1rem + 0.6vw, 1.5625rem);
-  --texto-h4: 1.0625em;
+  --texto-capital: 3.4em;
 
-  --interlineado: 1.7;
-  --interlineado-titulo: 1.2;
-  --peso-titulo: 650;
+  --interlineado-texto: 1.65;
+  --interlineado-titulo: 1.05;
+  --interlineado-encabezado: 1.2;
+  --peso-texto: 400;
   --peso-negrita: 650;
+  --peso-h4: 600;
+
+  --tracking-marca: 0.22em;
+  --tracking-categoria: 0.2em;
 
   /* ---- Espacio y medidas ---- */
+  --margen: clamp(1.375rem, 0.4rem + 3.7vw, 4.5rem);
   --medida: 65ch;
   --espacio-xs: 0.5rem;
   --espacio-s: 1rem;
   --espacio-m: 1.5rem;
-  --espacio-l: clamp(2.5rem, 2rem + 2vw, 4rem);
-  --espacio-xl: clamp(3.5rem, 2.5rem + 5vw, 7rem);
-  --margen-pagina: clamp(1.25rem, 0.5rem + 4vw, 3rem);
-  --radio: 0.375rem;
-  --grosor-borde: 1px;
+  --espacio-l: 2.5rem;
+  --espacio-xl: clamp(3rem, 2rem + 4vw, 5.5rem);
+  --alto-cabecera: 3.5rem;
+  --alto-hero: 92svh;
+  /* Móvil: altura del área de foto. Más baja que el hero para que `cover` no recorte
+     demasiado el ancho y se vean ambas figuras; el texto se superpone a su parte inferior. */
+  --alto-foto-hero: 74svh;
+  --alto-hero-escritorio: min(88svh, 56rem);
+  --ancho-texto-hero: min(100%, 36rem);
+  --ancho-texto-hero-escritorio: min(46%, 38rem);
+  --linea-hero-ancho: 3rem;
+  --linea-hero-grosor: 2px;
+  --grosor-linea: 1px;
   --grosor-cita: 3px;
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-fondo: #151513;
-    --color-texto: #e9e7e2;
-    --color-tenue: #a9a59c;
-    --color-acento: #8db0f5;
-    --color-borde: #38362f;
-    --color-superficie: #201f1c;
-  }
+  /* ---- Radios ---- */
+  --radio: 0.25rem;
+
+  /* ---- Movimiento ---- */
+  --duracion: 200ms;
+  --curva: ease;
+  --desenfoque-cabecera: 14px;
+
+  /* ---- Foto del hero ---- */
+  --filtro-foto: grayscale(1) brightness(0.85);
+  --filtro-foto-color: brightness(0.85);
+
+  /* Protección del header transparente sobre la foto. */
+  --degradado-cabecera: linear-gradient(
+    to bottom,
+    rgb(var(--fondo-rgb) / 0.85) 0%,
+    rgb(var(--fondo-rgb) / 0) 100%
+  );
+
+  /* Móvil: la foto se oscurece hacia abajo, donde va el texto, y se funde con el fondo. */
+  --degradado-hero: linear-gradient(
+    to bottom,
+    rgb(var(--fondo-rgb) / 0.7) 0%,
+    rgb(var(--fondo-rgb) / 0) 16%,
+    rgb(var(--fondo-rgb) / 0.1) 34%,
+    rgb(var(--fondo-rgb) / 0.78) 62%,
+    rgb(var(--fondo-rgb) / 0.95) 82%,
+    rgb(var(--fondo-rgb) / 1) 100%
+  );
+
+  /* Escritorio: degradado lateral para el texto a la izquierda, más fundido inferior. */
+  --degradado-hero-escritorio:
+    linear-gradient(
+      to bottom,
+      rgb(var(--fondo-rgb) / 0.7) 0%,
+      rgb(var(--fondo-rgb) / 0) 14%,
+      rgb(var(--fondo-rgb) / 0) 72%,
+      rgb(var(--fondo-rgb) / 1) 100%
+    ),
+    linear-gradient(
+      to right,
+      rgb(var(--fondo-rgb) / 0.92) 0%,
+      rgb(var(--fondo-rgb) / 0.82) 30%,
+      rgb(var(--fondo-rgb) / 0.3) 52%,
+      rgb(var(--fondo-rgb) / 0) 66%
+    );
 }

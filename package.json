@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@fontsource-variable/source-serif-4": "^5.3.1",
+    "@fontsource/cambo": "^5.3.0",
     "astro": "^7.4.7"
   },
   "devDependencies": {
